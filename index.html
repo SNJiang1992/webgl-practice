@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      canvas {
+        background-image: url('./sky.jpg');
+        background-size: cover;
+      }
+      #btn {
+        position: fixed;
+        top: 50px;
+        left: 50px;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="btn">闪烁</button>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+      import { initShaders } from './utils/shaderLoader.js';
+      import { convertPosition } from './utils/convertPosition.js';
+      import { TimeLine } from './utils/Animate.js';
+      const canvas = document.querySelector('#canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const timeLine = new TimeLine();
+
+      const g_points = [];
+
+      function drawPoints(gl, points) {
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        points.forEach(({ x, y, size, color }) => {
+          gl.vertexAttrib3f(a_Position, x, y, 0);
+          gl.vertexAttrib1f(a_PointSize, size);
+          //下面两个改变uniform变量的方法等同
+          // gl.uniform4f(u_FragColor, ...color);
+          gl.uniform4fv(u_FragColor, color);
+          gl.drawArrays(gl.POINTS, 0, 1);
+        });
+      }
+
+      canvas.addEventListener('click', function (e) {
+        let point = {
+          ...convertPosition(canvas, { x: e.clientX, y: e.clientY }),
+          size: Math.random() * 30 + 5,
+          color: [Math.random(), Math.random(), Math.random(), Math.random()],
+        };
+        g_points.push(point);
+        timeLine.addObject({
+          update: function (progress) {
+            let base = point.color[3];
+            let end = base + progress * 2;
+            if (end <= 1) {
+              point.color[3] = end;
+            } else if (end > 1 && end <= 2) {
+              point.color[3] = 2 - end;
+            } else if (end > 2) {
+              point.color[3] = end - 2;
+            }
+          },
+        });
+        drawPoints(gl, g_points);
+      });
+      const gl = canvas.getContext('webgl');
+      // 开启颜色合成功能
+      gl.enable(gl.BLEND);
+      // 设置合成方式
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINS_SRC_ALPHA);
+
+      const vsSource = `
+        attribute vec4 a_Position;
+        attribute float a_PointSize;
+        void main(){
+          gl_Position = a_Position;
+          gl_PointSize = a_PointSize;
+        }
+      `;
+      const fsSource = `
+       precision mediump float;
+       uniform vec4 u_FragColor;
+       // 画圆的着色程序
+        void main(){
+          float dist = distance(gl_PointCoord,vec2(0.5,0.5));
+          if(dist<0.5){
+            gl_FragColor = u_FragColor;
+          } else{
+            discard;
+          }
+        }
+      `;
+      initShaders(gl, vsSource, fsSource);
+      const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+      const a_PointSize = gl.getAttribLocation(gl.program, 'a_PointSize');
+      const u_FragColor = gl.getUniformLocation(gl.program, 'u_FragColor');
+      gl.vertexAttrib3f(a_Position, 0, 0, 0);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      !(function draw() {
+        timeLine.update();
+        drawPoints(gl, g_points);
+        requestAnimationFrame(draw);
+      })();
+
+      document.querySelector('#btn').addEventListener('click', blink);
+      function blink() {
+        timeLine.start();
+      }
+    </script>
+  </body>
+</html>
