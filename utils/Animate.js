@@ -22,8 +22,7 @@ export class TimeLine {
   update() {
     if (this.play) {
       this.progress =
-        this.pausePosition +
-        ((new Date().valueOf() - this.startTime) % this.option.duration) / this.option.duration;
+        ((new Date().valueOf() - this.startTime+ this.pausePosition*this.option.duration ) % this.option.duration) / this.option.duration;
     }
     this.objects.forEach((item) => {
       item.update(this.progress);
