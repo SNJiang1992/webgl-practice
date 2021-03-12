@@ -13,3 +13,14 @@ export function convertPosition(canvas, pos) {
     y: (-(pos.y - y - height / 2) * 2) / height,
   };
 }
+/**
+ *
+ * @param {*} canvas canvas本地
+ * @param {*} pos [x,y] 像素坐标
+ * @returns [x,y] webgl坐标
+ */
+export function px2GlPosition(canvas, pos) {
+  const width = canvas.width;
+  const height = canvas.height;
+  return [(pos[0] * 2) / width, (pos[1] * 2) / height];
+}
